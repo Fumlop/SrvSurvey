@@ -50,7 +50,7 @@ public sealed class ScanOrganicReplayTests
 
         var game = host.game!;
         var state = host.OnUi(() => (game.systemData?.address, game.systemBody?.id, game.cmdr.scanOne?.species));
-        var errors = host.EventExceptions;
+        var errors = host.AppErrors;
         var artifact = host.WriteArtifact($"errors={errors.Count} systemAddress={state.address} bodyId={state.id} scanOne={state.species}");
 
         Assert.True(errors.Count == 0, $"app raised {errors.Count} event exception(s), see {artifact}:\r\n{string.Join("\r\n", errors)}");
@@ -91,7 +91,7 @@ public sealed class ScanOrganicReplayTests
 
         var game = host.game!;
         var state = host.OnUi(() => (game.systemData?.address, game.systemBody?.id, game.cmdr.scanOne?.species));
-        var errors = host.EventExceptions;
+        var errors = host.AppErrors;
         var artifact = host.WriteArtifact($"errors={errors.Count} systemAddress={state.address} bodyId={state.id} scanOne={state.species}");
 
         Assert.True(errors.Count == 0, $"app raised {errors.Count} event exception(s), see {artifact}:\r\n{string.Join("\r\n", errors)}");

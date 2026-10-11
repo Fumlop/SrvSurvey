@@ -91,7 +91,8 @@ namespace SrvSurvey
             Program.crashGuard(() =>
             {
                 PlotPulse.resetPulse();
-                this.parseStatusFile();
+                // parse on the UI thread - Game and plotters read and add to `changed` (and other props) from there
+                Program.control.Invoke(this.parseStatusFile);
             });
         }
 

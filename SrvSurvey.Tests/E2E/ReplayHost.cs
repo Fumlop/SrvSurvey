@@ -159,22 +159,23 @@ internal sealed class ReplayHost : IDisposable
         if (this.game.isShutdown) throw new Exception("Game booted as shutdown - fixture is missing LoadGame/Commander?");
     }
 
-    /// <summary> Append journal lines and wait until the live watcher pipeline has dispatched the last of them </summary>
+    /// <summary> Append journal lines and wait until the live watcher pipeline has dispatched all of them </summary>
     public void Append(IList<string> lines, int timeoutMs = 15_000)
     {
         if (lines.Count == 0) return;
         var lastEvent = Newtonsoft.Json.Linq.JObject.Parse(lines.Last())["event"]!.ToString();
-        var before = CountLog($"Game.event => {lastEvent} ");
+        var marker = $"Game.event => {lastEvent} ";
+        var expected = CountLog(marker) + lines.Count(l => Newtonsoft.Json.Linq.JObject.Parse(l)["event"]!.ToString() == lastEvent);
 
         using (var fs = new FileStream(this.JournalPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
         using (var sw = new StreamWriter(fs, new UTF8Encoding(false)))
             foreach (var line in lines) sw.WriteLine(line);
 
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        while (CountLog($"Game.event => {lastEvent} ") <= before)
+        while (CountLog(marker) < expected)
         {
             if (sw2.ElapsedMilliseconds > timeoutMs)
-                throw new TimeoutException($"Journal watcher never dispatched '{lastEvent}' within {timeoutMs}ms");
+                throw new TimeoutException($"Journal watcher dispatched {CountLog(marker)}/{expected} '{lastEvent}' within {timeoutMs}ms");
             Thread.Sleep(50);
             // FileSystemWatcher can get stale - the app pokes it too
             OnUi(() => this.game!.journals?.poke());
@@ -188,8 +189,15 @@ internal sealed class ReplayHost : IDisposable
 
     public int CountLog(string fragment) => Logs.Count(l => l.Contains(fragment));
 
-    /// <summary> Every exception the app caught while processing a journal event (these are what pop the "Oops" dialog for players) </summary>
-    public List<string> EventExceptions => Logs.Where(l => l.Contains("Exception processing event")).ToList();
+    /// <summary>
+    /// Every exception the app caught and reported: journal event handlers, crashGuard, the Oops dialog (logged instead
+    /// of shown while Main.isClosing) and the swallowed ones in Status.json parsing.
+    /// </summary>
+    public List<string> AppErrors => Logs.Where(l =>
+        l.Contains("Exception processing event")
+        || l.Contains("FormErrorSubmit.show:")
+        || l.Contains("crashGuard:")
+        || l.Contains("parseStatusFile: System.")).ToList();
 
     /// <summary> Write the session's slice of the SrvSurvey log as a re-checkable artifact </summary>
     public string WriteArtifact(string summary)
