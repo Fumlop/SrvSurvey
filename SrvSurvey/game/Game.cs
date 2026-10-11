@@ -2549,15 +2549,16 @@ namespace SrvSurvey.game
                     }
                 });
 
+                // on the UI thread, queued after the merges the tasks above defer there
                 Task.WhenAll(taskSpansh, taskEDSM, taskCanonnPoi, taskCanonnStations).ContinueWith(response =>
                 {
-                    this.fetchSystemDataEnd(shouldRefreshGuardianSystemStatus);
+                    Program.defer(() => this.fetchSystemDataEnd(shouldRefreshGuardianSystemStatus));
                 });
 
                 // measure distance to closest nebula
                 this.systemData.getNebulaDist().ContinueWith(response =>
                 {
-                    this.predictSystemSpecies();
+                    Program.defer(() => this.predictSystemSpecies());
                 });
             }
             finally
@@ -2734,8 +2735,8 @@ namespace SrvSurvey.game
 
         private void onJournalEntry(Touchdown entry)
         {
-            // wait a bit for the status file to be written?
-            Task.Delay(10).ContinueWith((x) =>
+            // wait a bit for the status file to be written? (then back on the UI thread, with everything else touching cmdr)
+            Task.Delay(10).ContinueWith((x) => Program.defer(() =>
             {
                 // store the heading at the time of touchdown, so we can adjust the cockpit location to the center of the ship
                 this.cmdr.setTouchdown(entry, status.Heading);
@@ -2744,7 +2745,7 @@ namespace SrvSurvey.game
                 var ago = Util.timeSpanToString(DateTime.UtcNow - entry.timestamp);
                 log($"Touchdown {ago}, at: {touchdownLocation}");
                 this.fireUpdate(true);
-            });
+            }));
         }
 
         private void onJournalEntry(Liftoff entry)
@@ -2969,7 +2970,7 @@ namespace SrvSurvey.game
                 else
                 {
                     // delay a little
-                    Task.Delay(500).ContinueWith(t => onDockedWhenSafe(CalcMethod.AutoDock, entry.Taxi));
+                    Task.Delay(500).ContinueWith(t => Program.defer(() => onDockedWhenSafe(CalcMethod.AutoDock, entry.Taxi)));
                 }
             }
         }
