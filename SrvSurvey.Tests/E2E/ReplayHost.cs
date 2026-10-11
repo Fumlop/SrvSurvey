@@ -138,9 +138,32 @@ internal sealed class ReplayHost : IDisposable
     public void OnUi(Action func) => ui!.Invoke(func);
 
     /// <summary> Write Status.json the way the game does (whole file replaced) </summary>
-    public void WriteStatus(string json)
+    public void WriteStatus(string json) => WriteGameFile("Status.json", json);
+
+    /// <summary> Write one of the side files the game keeps next to the journals (Status.json, NavRoute.json, ...) </summary>
+    public void WriteGameFile(string name, string json)
     {
-        File.WriteAllText(Path.Combine(this.JournalFolder, "Status.json"), json);
+        File.WriteAllText(Path.Combine(this.JournalFolder, name), json);
+    }
+
+    /// <summary> Write a file into SrvSurvey's own (isolated) data folder, eg: routes/F123.json </summary>
+    public static void WriteDataFile(string relativePath, string json)
+    {
+        var path = Path.Combine(ReplayIsolation.DataFolder, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, json);
+    }
+
+    /// <summary> Wait until the UI thread drained pending work and the given log fragment appeared (or time out) </summary>
+    public bool WaitForLog(string fragment, int timeoutMs = 5_000)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < timeoutMs)
+        {
+            if (CountLog(fragment) > 0) return true;
+            Thread.Sleep(50);
+        }
+        return false;
     }
 
     /// <summary> Write the initial journal lines and boot a Game from them, exactly as Main does when it sees a journal </summary>
