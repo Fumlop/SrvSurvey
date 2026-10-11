@@ -178,6 +178,8 @@ internal sealed class ReplayHost : IDisposable
         if (!File.Exists(Path.Combine(this.JournalFolder, "Status.json")))
             WriteStatus("{ \"timestamp\":\"2026-01-01T00:00:00Z\", \"event\":\"Status\", \"Flags\":0 }");
 
+        // SystemData caches by address only (not by commander) - start every session cold so tests cannot leak bodies into each other
+        OnUi(() => ((System.Collections.IDictionary)typeof(SystemData).GetField("cache", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!).Clear());
         this.logStart = OnUi(() => Game.logs.Count);
         this.game = OnUi(() =>
         {

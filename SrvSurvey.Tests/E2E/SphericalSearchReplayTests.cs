@@ -51,5 +51,7 @@ public sealed class SphericalSearchReplayTests
         Assert.True(loaded, $"boxel search not loaded from commander file - premise broken, see {artifact}");
         Assert.True(errors.Count == 0, $"app raised {errors.Count} error(s), see {artifact}:\r\n{string.Join("\r\n", errors.Take(4))}");
         Assert.Contains("mode=GalaxyMap", state);
+        Assert.Contains("boxelSearchActive=False", state);
+        Assert.True(host.CountLog("Deactivating boxel search, cannot parse boxel") > 0, $"broken search was not deactivated visibly, see {artifact}");
     }
 }

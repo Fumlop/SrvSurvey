@@ -3209,13 +3209,24 @@ namespace SrvSurvey.game
 
         private void onJournalEntry(ScanOrganic entry)
         {
-            if (this.systemData == null) throw new Exception($"Why no this.systemData?");
+            if (this.systemData == null)
+            {
+                Game.log($"ScanOrganic: no systemData - cannot track this scan: {entry.Species_Localised}");
+                return;
+            }
             if (this.systemBody == null)
             {
                 this.systemBody = this.systemData.bodies.FirstOrDefault(_ => _.id == entry.Body);
+                // eg: body never scanned or approached in these journals - but we are standing on it, so the status file knows its name
+                if (this.systemBody == null && this.status.BodyName != null)
+                    this.systemBody = this.systemData.findOrCreate(this.status.BodyName, entry.Body);
                 Game.log($"Why was no this.systemBody? Found: {this.systemBody?.name}");
             }
-            if (this.systemBody == null) throw new Exception($"Why no this.systemBody?");
+            if (this.systemBody == null)
+            {
+                Game.log($"ScanOrganic: no systemBody - cannot track this scan: {entry.Species_Localised}");
+                return;
+            }
 
             // are we changing organism before the 3rd scan?
             var hash = $"{entry.SystemAddress}|{entry.Body}|{entry.Species}";

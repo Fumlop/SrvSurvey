@@ -54,8 +54,41 @@ public sealed class ScanOrganicReplayTests
         var artifact = host.WriteArtifact($"errors={errors.Count} systemAddress={state.address} bodyId={state.id} scanOne={state.species}");
 
         Assert.True(errors.Count == 0, $"app raised {errors.Count} event exception(s), see {artifact}:\r\n{string.Join("\r\n", errors)}");
+        Assert.True(host.CountLog("Left MainMenu without a new Location") > 0, $"systemData was not re-initialized by the MainMenu path, see {artifact}");
         Assert.Equal(systemAddress, state.address);
         Assert.Equal(bodyId, state.id);
+        Assert.Equal(species, state.species);
+    }
+
+    /// <summary>
+    /// Last resort in Game.onJournalEntry(ScanOrganic): the body is in no journal event at all (not even Location),
+    /// but Status.json says which body we stand on. Used to throw "Why no this.systemBody?" on every scan.
+    /// </summary>
+    [Fact]
+    public void ScanOrganicOnBodyOnlyStatusKnows_TracksTheScan()
+    {
+        var lines = File.ReadAllLines(ReplayHost.Fixture("issue1044-Journal.2026-08-19T100112.01.log"))
+            .Select(l => l.Replace("F0000001", "F0001050")).ToArray();
+        var bootEnd = indexOf(lines, "Music") + 1; // in normal space next to the main star
+        var scanOrganic = lines[indexOf(lines, "ScanOrganic")];
+
+        using var host = new ReplayHost("scanorganic-body-from-status", "Journal.2026-08-19T100112.01.log");
+        host.WriteStatus(statusInShip);
+        host.Boot(lines.Take(bootEnd), "E2E TESTER");
+        var knownBefore = host.OnUi(() => host.game!.systemData!.bodies.Any(b => b.id == bodyId));
+
+        host.WriteStatus(statusOnFoot);
+        host.Append([scanOrganic]);
+
+        var game = host.game!;
+        var state = host.OnUi(() => (game.systemBody?.id, game.systemBody?.name, game.cmdr.scanOne?.species));
+        var errors = host.AppErrors;
+        var artifact = host.WriteArtifact($"errors={errors.Count} bodyKnownBefore={knownBefore} bodyId={state.id} body={state.name} scanOne={state.species}");
+
+        Assert.False(knownBefore, $"body {bodyId} already known - premise broken, see {artifact}");
+        Assert.True(errors.Count == 0, $"app raised {errors.Count} error(s), see {artifact}:\r\n{string.Join("\r\n", errors.Take(4))}");
+        Assert.Equal(bodyId, state.id);
+        Assert.Equal(bodyName, state.name);
         Assert.Equal(species, state.species);
     }
 

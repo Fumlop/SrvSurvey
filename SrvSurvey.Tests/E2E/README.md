@@ -20,7 +20,8 @@ No game, no network data needed: `codexRef.json`, `nebulae.json` and `bio-criter
 - `ReplayIsolation` (a module initializer) points `Program.dataFolder` at `%TEMP%\SrvSurveyE2E\<run>` before any
   SrvSurvey type initializes, and boot aborts if the log path escapes it. A real `%appdata%\SrvSurvey` is never touched.
 - `Main.isClosing = true` makes `FormErrorSubmit.Show` log instead of opening the Oops dialog.
-- Tests run sequentially (SrvSurvey is full of static state). Each test uses its own commander FID.
+- Tests run sequentially (SrvSurvey is full of static state). Each test uses its own commander FID and
+  `SystemData`'s address-only cache is cleared per session.
 
 ## Fixture
 
@@ -37,6 +38,7 @@ Must be Release: in DEBUG `Game`'s static constructor skips init unless the proc
 | Test | Upstream issues | Fault injected |
 |---|---|---|
 | ScanOrganicReplayTests.Issue1044 | #1050 #1044 #1030 #1018 #1015 #1012 #1011 #1009 #1007 #993 #1046 #678 | real journal with a 2s `Music: MainMenu` mid-session |
+| ScanOrganicReplayTests.ScanOrganicOnBodyOnlyStatusKnows | #1050 #1015 (residual throw sites) | ScanOrganic on a body only Status.json names |
 | ScanOrganicReplayTests.Issue902 | #902 #935 #993 | journal starts landed on a body never scanned on this PC |
 | StatusRaceReplayTests | #1037 #1034 | Status.json churn during 400 mode changes |
 | JumpInfoReplayTests.Issue985 | #985 | NavRoute.json without `Route`, FSD charging |
