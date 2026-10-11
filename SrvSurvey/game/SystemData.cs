@@ -29,8 +29,9 @@ namespace SrvSurvey.game
 
             if (systemFileName != "") Game.log($"Loading SystemData for: '{systemFileName}' ({systemAddress})");
 
-            // use cache entry if present
-            if (systemAddress != 0 && cache.TryGetValue(systemAddress, out SystemData? value))
+            // use cache entry if present - the cache is per system, so only if it belongs to this commander
+            var fidFolder = Path.Combine("systems", fid) + Path.DirectorySeparatorChar;
+            if (systemAddress != 0 && cache.TryGetValue(systemAddress, out SystemData? value) && value.filepath?.Contains(fidFolder) != false)
                 return value;
 
             // try finding files by systemAddress first, then system name
@@ -1470,8 +1471,10 @@ namespace SrvSurvey.game
                 return m.Groups[1].Value;
             else if (starType == "T Tauri Star")
                 return "TTS";
-            else
+            else if (starType.Length > 0)
                 return starType[0].ToString();
+            else
+                return "?";
         }
 
         public void onSpanshResponse(ApiSystemDump.System spanshSystem)
@@ -1526,7 +1529,8 @@ namespace SrvSurvey.game
                     body.atmosphereComposition = entry.atmosphereComposition.ToDictionary(_ => Util.compositionToCamel(_.Key), _ => _.Value);
                 if (body.materials == null && entry.materials != null) body.materials = entry.materials;
                 if (body.volcanism == null && entry.volcanismType != null) body.volcanism = entry.volcanismType == "No volcanism" ? "" : entry.volcanismType;
-                if (body.starType == null && entry.subType != null)
+                // only stars, else planets get a starType from their sub-type, eg: "High metal content world" => "H"
+                if (body.starType == null && entry.type == "Star" && entry.subType != null)
                 {
                     body.starType = parseStarType(entry.subType);
                     //body.starSubClass = int.Parse(entry.spectralClass[1]);

@@ -121,15 +121,15 @@ namespace SrvSurvey.net
                     var json4 = await Git.client.GetStringAsync($"https://raw.githubusercontent.com/njthomson/SrvSurvey/main/SrvSurvey/allStructures.json");
                     Data.saveWithRetry(Path.Combine(Git.pubDataFolder, "allStructures.json"), json4);
 
-                    // Remove folder, to remove any orphan files
-                    if (Directory.Exists(Git.pubGuardianFolder))
-                        Directory.Delete(Git.pubGuardianFolder, true);
-
                     Game.log($"Downloading guardian.zip ...");
                     var url = $"https://raw.githubusercontent.com/njthomson/SrvSurvey/main/data/guardian.zip";
                     var filepath = Path.Combine(Git.pubDataFolder, "guardian.zip");
                     Game.log($"{url} => {filepath}");
                     var bytes = await Git.client.GetByteArrayAsync(url);
+
+                    // Remove folder, to remove any orphan files (only once the download worked, else we'd have nothing)
+                    if (Directory.Exists(Git.pubGuardianFolder))
+                        Directory.Delete(Git.pubGuardianFolder, true);
                     await File.WriteAllBytesAsync(filepath, bytes);
                     ZipFile.ExtractToDirectory(filepath, Git.pubGuardianFolder, true);
 

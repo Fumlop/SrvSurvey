@@ -70,7 +70,7 @@ namespace BioCriterias
                 {
                     // One of the .json files failed to parse?
                     Game.log($"Bad json in '{filepath}': {ex}");
-                    Debugger.Break();
+                    if (Debugger.IsAttached) Debugger.Break();
                     FormErrorSubmit.Show(ex);
                 }
             }

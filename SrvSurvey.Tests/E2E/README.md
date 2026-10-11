@@ -50,6 +50,8 @@ Must be Release: in DEBUG `Game`'s static constructor skips init unless the proc
 | OfflineReplayTests.Issue963 | #963 #847 | Git.refreshPublishedData with every request failing like a DNS failure |
 | UiCrashTests.Issue1075 | #1075 | real ListView sorted by FormBoxelSearch.ColumnSorter with a null distance Tag |
 | UiCrashTests.Issue948 | #948 | real ViewJourneySystem.setSystem for a system with no data file |
+| DataLossReplayTests.UnreadableGuardianSiteFile | (P3 scan) | ApproachSettlement for a guardian site whose survey file cannot be parsed |
+| DataLossReplayTests.SystemDataCache | (P3 scan) | two commanders load the same system in one session |
 | ThreadingReplayTests | (P2 scan, no issue) | Touchdown + deferAfter from a background thread still work after moving to the UI thread - regression guard only, the races were not reproducible |
 | UiCrashTests.Issue1070 | #1070 #1064 #962 | PlotFSS.screenGrab with 0 width / 0 height rects |
 

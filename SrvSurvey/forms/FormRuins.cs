@@ -342,7 +342,8 @@ namespace SrvSurvey
                 if (targetType == GuardianSiteData.SiteType.Unknown)
                     name += $" - {initialData.type}";
 
-                filteredSites.Add(name, initialData);
+                // (another site can produce the same display name)
+                filteredSites.TryAdd(name, initialData);
                 comboSite.Text = initialData.displayName;
             }
 

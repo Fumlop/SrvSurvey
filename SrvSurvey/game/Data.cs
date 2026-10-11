@@ -19,7 +19,17 @@ namespace SrvSurvey.game
             // read and parse file contents into tmp object
             if (File.Exists(filepath))
             {
-                var json = Data.readToEndShared(filepath);
+                string json;
+                try
+                {
+                    json = Data.readToEndShared(filepath);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // still locked after retrying, or no access - callers already handle a missing file
+                    Game.log($"Failed to read data file: {filepath}\r\n{ex.Message}");
+                    return null;
+                }
                 //var json = File.ReadAllText(filepath);
                 if (string.IsNullOrEmpty(json))
                 {
@@ -87,8 +97,9 @@ namespace SrvSurvey.game
             {
                 Game.log($"Failed to save: {filepath} (allowRetry:{allowRetry})\r\n\r\n{ex}");
                 if (allowRetry)
-                    Program.defer(() => saveWithRetry(filepath, json, false, checkFolder));
-                else
+                    // give whatever holds the file a moment
+                    Task.Delay(500).ContinueWith(_ => Program.defer(() => saveWithRetry(filepath, json, false, checkFolder)));
+                else if (Debugger.IsAttached)
                     Debugger.Break(); // Will this keep happening?
             }
         }

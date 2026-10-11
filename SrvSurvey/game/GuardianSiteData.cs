@@ -84,6 +84,13 @@ namespace SrvSurvey.game
             Directory.CreateDirectory(folder);
             var data = Data.Load<GuardianSiteData>(filepath);
 
+            // the file exists but could not be read: do NOT replace the player's survey with an empty site
+            if (data == null && File.Exists(filepath))
+            {
+                Game.log($"Cannot read existing site data, leaving it untouched: {filepath}");
+                return null;
+            }
+
             // create new if needed
             if (data == null)
             {

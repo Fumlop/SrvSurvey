@@ -46,10 +46,19 @@ namespace SrvSurvey.game
         private static string prepLogFile()
         {
             // prepare filepath for log file
-            Directory.CreateDirectory(Game.logFolder);
             var datepart = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var filepath = Path.Combine(Game.logFolder, $"srvs-{datepart}.txt")!;
-            File.WriteAllLines(filepath, Game.logs);
+            try
+            {
+                Directory.CreateDirectory(Game.logFolder);
+                File.WriteAllLines(filepath, Game.logs);
+            }
+            catch (Exception ex)
+            {
+                // failing here kills Game's static init, and with it the whole app - log to %temp% instead
+                filepath = Path.Combine(Path.GetTempPath(), $"srvs-{datepart}.txt");
+                File.WriteAllLines(filepath, Game.logs.Append($"Cannot write logs to: {Game.logFolder} - {ex.Message}"));
+            }
 
             return filepath;
         }
@@ -70,8 +79,8 @@ namespace SrvSurvey.game
             }
             catch
             {
-                // try one more shortly afterwards
-                Application.DoEvents();
+                // try one more shortly afterwards (no DoEvents: this runs on any thread, and re-enters the UI thread)
+                Thread.Sleep(10);
                 try
                 {
                     File.AppendAllText(Game.logPath, txt + "\r\n");
@@ -94,7 +103,8 @@ namespace SrvSurvey.game
             {
                 var filename = logFiles[idx].FullName;
                 Game.log($"Removing old log file: {filename}");
-                File.Delete(filename);
+                try { File.Delete(filename); }
+                catch (Exception ex) { Game.log($"Cannot remove old log file: {ex.Message}"); }
             }
         }
 
