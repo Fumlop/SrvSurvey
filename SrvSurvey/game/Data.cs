@@ -95,14 +95,35 @@ namespace SrvSurvey.game
 
         public static StreamReader openSharedStreamReader(string filepath)
         {
-            return new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+            // allow Delete too, so reading never blocks saveWithRetry replacing the file
+            return new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete));
         }
 
-        /// <summary> Read to end of file using a shared read access StreamReader </summary>
+        /// <summary> Read to end of file using a shared read access StreamReader, retrying briefly whilst something else has it locked </summary>
         public static string readToEndShared(string filepath)
         {
-            using var reader = Data.openSharedStreamReader(filepath);
-            return reader.ReadToEnd();
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    using var reader = Data.openSharedStreamReader(filepath);
+                    return reader.ReadToEnd();
+                }
+                catch (IOException ex) when (attempt < 4 && isSharingViolation(ex))
+                {
+                    // eg: anti-virus, cloud sync or a save replacing the file - wait 50, 100, 200, 400ms
+                    var delay = 50 * (1 << attempt);
+                    Game.log($"File locked, retrying in {delay}ms (attempt {attempt + 1}/5): {filepath}");
+                    Thread.Sleep(delay);
+                }
+            }
+        }
+
+        private static bool isSharingViolation(IOException ex)
+        {
+            // ERROR_SHARING_VIOLATION or ERROR_LOCK_VIOLATION
+            var code = ex.HResult & 0xFFFF;
+            return code == 32 || code == 33;
         }
     }
 
