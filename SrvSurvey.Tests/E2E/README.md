@@ -84,8 +84,8 @@ UiCrashTests drive single WinForms controls rather than a journal replay, becaus
     pwsh SrvSurvey.Tests/E2E/verify-red.ps1 [-BaseRef <commit>]
 
 Runs the current tests against the product code of `-BaseRef` (default: the upstream commit the fixes start from) in a
-temporary worktree, output in `e2e-artifacts/red-run.txt`. Expected: all fix-tests fail, only the guard-only tests
-(StatusRace, Threading, LockedGuardianSiteFile) pass.
+temporary worktree, output in `e2e-artifacts/red-run.txt`. Expected: all fix-tests fail, only StatusRace and Threading
+pass. LockedGuardianSiteFile also fails there, but only on its premise (the retry log line is new) - it is a guard.
 
 ## Not covered by any test
 
