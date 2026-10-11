@@ -32,7 +32,7 @@ name, FID, squadron, group and ship ident replaced.
 
     pwsh SrvSurvey.Tests/E2E/run-e2e.ps1 [-Artifacts <folder>]
 
-Artifacts: `<folder>/<test>.log` (the SrvSurvey log for that session, first line = asserted state) and `run-e2e.txt`.
+`run-e2e.ps1` runs the whole test project (E2E + InaraTests). Artifacts: `<folder>/<test>.log` (the SrvSurvey log for that session, first line = asserted state) and `run-e2e.txt`.
 Must be Release: in DEBUG `Game`'s static constructor skips init unless the process is `SrvSurvey.exe`.
 
 | Test | Upstream issues | Fault injected |
@@ -52,6 +52,8 @@ Must be Release: in DEBUG `Game`'s static constructor skips init unless the proc
 | UiCrashTests.Issue948 | #948 | real ViewJourneySystem.setSystem for a system with no data file |
 | DataLossReplayTests.UnreadableGuardianSiteFile | (P3 scan) | ApproachSettlement for a guardian site whose survey file cannot be parsed |
 | DataLossReplayTests.SystemDataCache | (P3 scan) | two commanders load the same system in one session |
+| DataLossReplayTests.LockedGuardianSiteFile | (P3 review) | survey file locked longer than the read retries during ApproachSettlement - guard only: the base code also did not overwrite, it fails there only on the new retry log |
+| DataLossReplayTests.UnparseableCommanderFile | (P3 review) | commander file that cannot be parsed is kept as `.bad` before a fresh one replaces it |
 | ThreadingReplayTests | (P2 scan, no issue) | Touchdown + deferAfter from a background thread still work after moving to the UI thread - regression guard only, the races were not reproducible |
 | UiCrashTests.Issue1070 | #1070 #1064 #962 | PlotFSS.screenGrab with 0 width / 0 height rects |
 
@@ -62,4 +64,30 @@ UiCrashTests drive single WinForms controls rather than a journal replay, becaus
 - ColumnSorter: Tag null on either side; both null; ascending/descending flips left/right; unknown distance must sort as 0 (first).
 - ViewJourneySystem: no system file at all; unreadable file; the stub must carry the StarRef name so the header is right.
 - screenGrab: width 0, height 0 (GetClientRect on a window being created/closed); a real small rect must still return a bitmap of that size.
-- Offline: DNS failure has no HTTP status code; codex init must not delete the files it falls back on; Git refresh must not open the Oops dialog.
+- Offline: DNS failure has no HTTP status code; codex init must not delete the files it falls back on (codexRef, bioRef, nebulae); Git refresh must not open the Oops dialog.
+
+## Failure modes - data loss (DataLossReplayTests)
+
+- Survey file unparseable -> Load returns null -> treated as a new site -> saved over the survey.
+- Survey file locked longer than the read retries -> must surface as an error, never as "no survey" (no overwrite).
+- Any other data file unparseable (commander, colony, codex ...) -> callers create a fresh object -> the original must survive as `.bad`.
+- Two commanders, same system, same session -> the cache must not hand one commander's bodies to the other.
+
+## Failure modes - threading (ThreadingReplayTests)
+
+- Touchdown work moved to the UI thread must still record the touchdown position on the commander.
+- deferAfter called from a background thread must still run, and run on the UI thread.
+- Not covered: fetchSystemDataEnd / predictSystemSpecies ordering (needs external data, which the harness turns off).
+
+## Proving the tests catch the bugs
+
+    pwsh SrvSurvey.Tests/E2E/verify-red.ps1 [-BaseRef <commit>]
+
+Runs the current tests against the product code of `-BaseRef` (default: the upstream commit the fixes start from) in a
+temporary worktree, output in `e2e-artifacts/red-run.txt`. Expected: all fix-tests fail, only the guard-only tests
+(StatusRace, Threading, LockedGuardianSiteFile) pass.
+
+## Not covered by any test
+
+Settings `.bad` backup (Settings.Load shows a MessageBox first), FormPostProcess skipping corrupt system files,
+screenshot locking/retry (lives on the Main form), BoxelSearch transient Spansh errors, clipboard retry.

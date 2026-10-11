@@ -1341,8 +1341,9 @@ namespace SrvSurvey
                     matchFound = this.pendingScreenshots.Remove(e.FullPath, out entry);
                 Game.log($"Screenshot created: {e.FullPath}, matchFound: {matchFound}");
 
+                // off the watcher thread: processing may wait for the game to finish writing the file
                 if (matchFound)
-                    this.processScreenshot(entry!, e.FullPath);
+                    Task.Run(() => Program.crashGuard(() => this.processScreenshot(entry!, e.FullPath)));
             });
         }
 

@@ -333,8 +333,12 @@ namespace SrvSurvey
             if (File.Exists(settingsPath))
             {
                 var backupPath = settingsPath + ".bad";
-                File.Copy(settingsPath, backupPath, true);
-                Game.log($"Kept unreadable settings file as: {backupPath}");
+                try
+                {
+                    File.Copy(settingsPath, backupPath, true);
+                    Game.log($"Kept unreadable settings file as: {backupPath}");
+                }
+                catch (Exception ex) { Game.log($"Cannot keep unreadable settings file: {ex.Message}"); }
             }
             Game.log($"Creating new settings file: {settingsPath}");
             var newSettings = new Settings();

@@ -65,13 +65,17 @@ public sealed class OfflineReplayTests
 
         var genusCount = Game.codexRef.genus?.Count ?? 0;
         var nebulaeKept = File.Exists(nebulaePath);
+        // every file init falls back on must survive the failed refresh
+        var codexRefKept = new FileInfo(Path.Combine(dataFolder, "codexRef.json")) is { Exists: true, Length: > 1000 };
+        var bioRefKept = new FileInfo(Path.Combine(dataFolder, "bioRef.json")) is { Exists: true, Length: > 1000 };
         var logs = host.OnUi(() => Game.logs.Skip(logStart).ToList());
-        var artifact = host.WriteArtifact($"initFailure={failure?.GetType().Name}:{failure?.Message} networkCalls={offline.calls} genus={genusCount} nebulaeKept={nebulaeKept}");
+        var artifact = host.WriteArtifact($"initFailure={failure?.GetType().Name}:{failure?.Message} networkCalls={offline.calls} genus={genusCount} nebulaeKept={nebulaeKept} codexRefKept={codexRefKept} bioRefKept={bioRefKept}");
 
         Assert.True(offline.calls >= 3, $"init did not try the network ({offline.calls} calls) - premise broken, see {artifact}");
         Assert.True(failure == null, $"codexRef.init failed offline: {failure}");
         Assert.True(genusCount > 0, $"no bio genus loaded from disk, see {artifact}");
         Assert.True(nebulaeKept, $"nebulae.json was deleted although the re-download failed, see {artifact}");
+        Assert.True(codexRefKept && bioRefKept, $"codexRef.json/bioRef.json lost after the failed refresh, see {artifact}");
     }
 
     [Fact]

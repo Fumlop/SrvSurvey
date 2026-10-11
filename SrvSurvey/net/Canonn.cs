@@ -467,7 +467,8 @@ namespace SrvSurvey.canonn
             Game.log($"Reading {files.Length} structure files from disk");
             foreach (var filename in files)
             {
-                var data = Data.Load<GuardianSiteData>(filename)!;
+                var data = Data.Load<GuardianSiteData>(filename);
+                if (data == null) continue; // empty/unparseable, Data.Load logged it
 
                 var matches = allStructures.Where(_ => _.systemAddress == data.systemAddress
                     && _.bodyId == data.bodyId
@@ -510,7 +511,8 @@ namespace SrvSurvey.canonn
             Game.log($"Reading {files.Length} beacon files from disk");
             foreach (var filename in files)
             {
-                var data = Data.Load<GuardianBeaconData>(filename)!;
+                var data = Data.Load<GuardianBeaconData>(filename);
+                if (data == null) continue; // empty/unparseable, Data.Load logged it
 
                 var matches = allStructures.Where(_ => _.systemAddress == data.systemAddress
                     && _.bodyId == data.bodyId

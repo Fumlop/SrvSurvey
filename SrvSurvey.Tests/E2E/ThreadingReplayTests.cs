@@ -4,8 +4,9 @@ namespace SrvSurvey.Tests.E2E;
 
 /// <summary>
 /// Regression guards for work moved from thread-pool continuations onto the UI thread (P2 of the crash scan):
-/// Touchdown (cmdr.setTouchdown + Save), fetchSystemDataEnd, predictSystemSpecies, Util.deferAfter.
-/// These races could not be reproduced on demand; the tests prove the moved work still happens, in order, without errors.
+/// Touchdown (cmdr.setTouchdown + Save) and Util.deferAfter. (fetchSystemDataEnd/predictSystemSpecies need external
+/// data, which the harness turns off - they are not covered.) The races could not be reproduced on demand; these only
+/// prove the moved work still happens, on the UI thread, without errors.
 /// </summary>
 public sealed class ThreadingReplayTests
 {

@@ -19,17 +19,8 @@ namespace SrvSurvey.game
             // read and parse file contents into tmp object
             if (File.Exists(filepath))
             {
-                string json;
-                try
-                {
-                    json = Data.readToEndShared(filepath);
-                }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    // still locked after retrying, or no access - callers already handle a missing file
-                    Game.log($"Failed to read data file: {filepath}\r\n{ex.Message}");
-                    return null;
-                }
+                // (a file still locked after retrying throws: returning null here would let callers create and save a fresh object over it)
+                var json = Data.readToEndShared(filepath);
                 //var json = File.ReadAllText(filepath);
                 if (string.IsNullOrEmpty(json))
                 {
@@ -49,6 +40,9 @@ namespace SrvSurvey.game
                 {
                     Game.log($"Failed to read data from: {filepath}\r\n{ex.Message}");
                     Game.log(json);
+                    // callers treat null as "no data yet" and may save a fresh object over this file - keep the original
+                    try { File.Copy(filepath, filepath + ".bad", true); }
+                    catch (Exception ex2) { Game.log($"Cannot keep a copy of: {filepath} - {ex2.Message}"); }
                 }
             }
             else

@@ -14,16 +14,19 @@ namespace SrvSurvey.Tests.E2E;
 public sealed class UiCrashTests
 {
     /// <summary> #1075: sorting the boxel search list by distance while some systems have no distance yet (Tag == null) </summary>
-    [Fact]
-    public void Issue1075_SortBoxelSearchByDistanceWithUnknownDistances()
+    [Theory]
+    [InlineData(true, "unknown1,unknown2,near,far")]
+    [InlineData(false, "far,near,unknown1,unknown2")]
+    public void Issue1075_SortBoxelSearchByDistanceWithUnknownDistances(bool ascending, string expected)
     {
-        using var host = new ReplayHost("issue1075-boxel-sort", "unused.log");
+        using var host = new ReplayHost($"issue1075-boxel-sort-{(ascending ? "asc" : "desc")}", "unused.log");
         var (error, order) = host.OnUi(() =>
         {
             using var list = new ListView { View = View.Details };
             list.Columns.Add("system"); list.Columns.Add("distance");
             list.CreateControl();
-            foreach (var (name, dist) in new[] { ("far", (double?)42.5), ("unknown", null), ("near", 3.25) })
+            // two unknown distances, so null is compared against null as well as against a value
+            foreach (var (name, dist) in new[] { ("far", (double?)42.5), ("unknown1", null), ("near", 3.25), ("unknown2", null) })
             {
                 var item = new ListViewItem(name);
                 item.SubItems.Add(new ListViewItem.ListViewSubItem(item, dist?.ToString() ?? "") { Tag = dist });
@@ -31,8 +34,8 @@ public sealed class UiCrashTests
             }
             try
             {
-                // what FormBoxelSearch does when the distance column header is clicked
-                list.ListViewItemSorter = new FormBoxelSearch.ColumnSorter { column = 1 };
+                // what FormBoxelSearch does when the distance column header is clicked (again, to flip the order)
+                list.ListViewItemSorter = new FormBoxelSearch.ColumnSorter { column = 1, ascending = ascending };
                 list.Sort();
                 return ((Exception?)null, string.Join(",", list.Items.Cast<ListViewItem>().Select(i => i.Text)));
             }
@@ -41,24 +44,34 @@ public sealed class UiCrashTests
         var artifact = host.WriteArtifact($"error={error?.GetType().Name}:{error?.Message} order={order}");
 
         Assert.True(error == null, $"sorting threw {error}, see {artifact}");
-        Assert.Equal("unknown,near,far", order);
+        // (ListView sorting is not stable, so equal (unknown) items may swap)
+        Assert.Equal(expected.Split(',').Order(), order.Split(',').Order());
+        Assert.Equal(expected.Replace("unknown1", "u").Replace("unknown2", "u"), order.Replace("unknown1", "u").Replace("unknown2", "u"));
     }
 
     /// <summary> #948: journey viewer selecting a system that has no (readable) system file for this commander </summary>
-    [Fact]
-    public void Issue948_JourneyViewerSystemWithoutDataFile()
+    [Theory]
+    [InlineData("missing", null)]
+    [InlineData("unreadable", "{ \"name\":\"Never Visited AB-C d1-2\", \"bodies\": [ ")]
+    public void Issue948_JourneyViewerSystemWithoutDataFile(string variant, string? fileContent)
     {
-        using var host = new ReplayHost("issue948-journey-system", "unused.log");
+        const string fid = "F0000948";
+        const string name = "Never Visited AB-C d1-2";
+        const long address = 123456789;
+        if (fileContent != null)
+            ReplayHost.WriteDataFile(Path.Combine("systems", fid, $"{name}_{address}.json"), fileContent);
+
+        using var host = new ReplayHost($"issue948-journey-system-{variant}", "unused.log");
         var (error, shownName) = host.OnUi(() =>
         {
-            Game.settings.lastFid = "F0000948";
+            Game.settings.lastFid = fid;
             Game.settings.lastCommander = "E2E TESTER";
             try
             {
                 using var view = new ViewJourneySystem(null!);
                 view.setSystem(new CommanderJourney.SystemStats
                 {
-                    starRef = new StarRef(new double[] { 1, 2, 3 }, "Never Visited AB-C d1-2", 123456789),
+                    starRef = new StarRef(new double[] { 1, 2, 3 }, name, address),
                     count = new(),
                 });
                 return ((Exception?)null, view.systemData?.name);
@@ -68,7 +81,7 @@ public sealed class UiCrashTests
         var artifact = host.WriteArtifact($"error={error?.GetType().Name}:{error?.Message} shownName={shownName}");
 
         Assert.True(error == null, $"setSystem threw {error}, see {artifact}");
-        Assert.Equal("Never Visited AB-C d1-2", shownName);
+        Assert.Equal(name, shownName);
     }
 
     /// <summary> #1070 #1064: FSS screen grab while the game window reports a 0 size (being created/closed) </summary>
