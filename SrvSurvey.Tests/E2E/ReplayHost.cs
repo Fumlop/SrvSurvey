@@ -51,6 +51,7 @@ internal sealed class ReplayHost : IDisposable
         Directory.CreateDirectory(this.JournalFolder);
         this.JournalPath = Path.Combine(this.JournalFolder, journalFileName);
         EnsureUiThread();
+        this.logStart = OnUi(() => Game.logs.Count);
     }
 
     public static string RepoRoot

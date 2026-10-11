@@ -721,6 +721,8 @@ namespace SrvSurvey
         private void drawCommander(Graphics g)
         {
             if (game?.systemSite == null || game?.status == null || game.isShutdown || this.siteData == null || game?.systemBody == null) return;
+            // site location is not known until it has been determined (or was saved without one)
+            if (this.siteData.location == null) return;
 
             g.ResetTransform();
 

@@ -377,7 +377,8 @@ namespace SrvSurvey.canonn
             foreach (var filename in files)
             {
                 var data = Data.Load<GuardianSiteData>(filename);
-                if (data == null) throw new Exception($"Why no siteData for: {filename}");
+                // empty or unreadable file (Data.Load logged why) - skip it rather than fail the whole list
+                if (data == null) continue;
 
                 if (data.type == SiteType.Unknown)
                 {

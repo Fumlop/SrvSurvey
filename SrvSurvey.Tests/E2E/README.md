@@ -46,3 +46,17 @@ Must be Release: in DEBUG `Game`'s static constructor skips init unless the proc
 | SphericalSearchReplayTests | #994 #988 #1014 | active boxel search with unparseable boxel, galaxy map + NavRoute |
 | BioCriteriaReplayTests | #1043 | `pub\bio-criteria` missing while scanning |
 | DataFileLockReplayTests | #978 #940 #938 | system file locked exclusively for 300ms during FSDJump |
+| OfflineReplayTests.Issue1045 | #1045 #1038 #1005 | codexRef.init a week after the last download, every request fails like a DNS failure |
+| OfflineReplayTests.Issue963 | #963 #847 | Git.refreshPublishedData with every request failing like a DNS failure |
+| UiCrashTests.Issue1075 | #1075 | real ListView sorted by FormBoxelSearch.ColumnSorter with a null distance Tag |
+| UiCrashTests.Issue948 | #948 | real ViewJourneySystem.setSystem for a system with no data file |
+| UiCrashTests.Issue1070 | #1070 #1064 #962 | PlotFSS.screenGrab with 0 width / 0 height rects |
+
+## Failure modes (written before the UI-level tests)
+
+UiCrashTests drive single WinForms controls rather than a journal replay, because no journal event reaches them:
+
+- ColumnSorter: Tag null on either side; both null; ascending/descending flips left/right; unknown distance must sort as 0 (first).
+- ViewJourneySystem: no system file at all; unreadable file; the stub must carry the StarRef name so the header is right.
+- screenGrab: width 0, height 0 (GetClientRect on a window being created/closed); a real small rect must still return a bitmap of that size.
+- Offline: DNS failure has no HTTP status code; codex init must not delete the files it falls back on; Git refresh must not open the Oops dialog.

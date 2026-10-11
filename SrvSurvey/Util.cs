@@ -780,6 +780,15 @@ static class Util
             && actual.B > expected.B - tolerance && actual.B < expected.B + tolerance;
     }
 
+    /// <summary> Offline/DNS (no status code), timeouts, 403 and server side errors: nothing the player can act on </summary>
+    public static bool isTransientNetworkError(Exception? ex)
+    {
+        if (ex is AggregateException agg && agg.InnerExceptions.Count == 1) ex = agg.InnerException;
+        if (ex is TaskCanceledException) return true;
+        var reqEx = ex as HttpRequestException;
+        return reqEx != null && (reqEx.StatusCode == null || reqEx.StatusCode == System.Net.HttpStatusCode.Forbidden || (int)reqEx.StatusCode >= 500);
+    }
+
     public static bool isFirewallProblem(Exception? ex)
     {
         if (ex == null) return false;

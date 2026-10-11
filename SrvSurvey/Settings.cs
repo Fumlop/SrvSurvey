@@ -297,12 +297,13 @@ namespace SrvSurvey
             // read and parse file contents into tmp object
             if (File.Exists(settingsPath))
             {
-                var json = File.ReadAllText(settingsPath);
+                var json = Data.readToEndShared(settingsPath);
                 if (!string.IsNullOrWhiteSpace(json))
                 {
                     try
                     {
-                        var settings = JsonConvert.DeserializeObject<Settings>(json)!;
+                        var settings = JsonConvert.DeserializeObject<Settings>(json)
+                            ?? throw new Exception("settings.json contains no settings");
 
                         Game.log($"Loaded settings: {json}");
 
@@ -328,7 +329,13 @@ namespace SrvSurvey
                 }
             }
 
-            // we reach here if the file is missing or corrupt
+            // we reach here if the file is missing or corrupt - keep a corrupt one, it is all the player's settings
+            if (File.Exists(settingsPath))
+            {
+                var backupPath = settingsPath + ".bad";
+                File.Copy(settingsPath, backupPath, true);
+                Game.log($"Kept unreadable settings file as: {backupPath}");
+            }
             Game.log($"Creating new settings file: {settingsPath}");
             var newSettings = new Settings();
             newSettings.Save();

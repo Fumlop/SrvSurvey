@@ -220,7 +220,11 @@ namespace SrvSurvey.game
                 }
                 catch (Exception ex)
                 {
-                    FormErrorSubmit.Show(ex);
+                    // Spansh down/slow/offline: we'll try again next time
+                    if (Util.isTransientNetworkError(ex))
+                        Game.log($"findSystemsInCurrentBoxel: {ex.Message}");
+                    else
+                        FormErrorSubmit.Show(ex);
                 }
                 finally
                 {

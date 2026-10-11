@@ -161,7 +161,19 @@ namespace SrvSurvey.game
 
         public static SystemData From(StarRef starRef, string fid, string? cmdr)
         {
-            return Load(starRef.name, starRef.id64, fid, cmdr, true)!;
+            var data = Load(starRef.name, starRef.id64, fid, cmdr, true);
+            if (data != null) return data;
+
+            // no (readable) file for this system, eg: visited under another commander or on another PC
+            Game.log($"SystemData.From: no data for '{starRef.name}' ({starRef.id64}), using an empty stub");
+            return new SystemData()
+            {
+                filepath = Path.Combine(Program.dataFolder, "systems", fid, Util.safeFilename($"{starRef.name}_{starRef.id64}.json")),
+                name = starRef.name,
+                address = starRef.id64,
+                starPos = new double[] { starRef.x, starRef.y, starRef.z },
+                commander = cmdr!,
+            };
         }
 
         public static SystemData From(ISystemDataLocator entry, string fid, string cmdrName)
