@@ -760,6 +760,13 @@ namespace SrvSurvey.game
                 var n = obj["currentCount"]?.Value<int>() ?? 0;
                 bs.setCurrentCount(n);
 
+                // a search cannot be active without a boxel to search
+                if (bs.active && bs.boxel == null)
+                {
+                    Game.log($"Deactivating boxel search, cannot parse boxel: {obj["boxel"]}");
+                    bs.active = false;
+                }
+
                 return bs;
             }
             catch (Exception ex)

@@ -63,6 +63,8 @@ internal sealed class ReplayHost : IDisposable
         }
     }
 
+    public static string BioCriteriaFolder => Path.Combine(ReplayIsolation.DataFolder, "pub", "bio-criteria");
+
     public static string Fixture(string name) => Path.Combine(RepoRoot, "SrvSurvey.Tests", "E2E", "Fixtures", name);
 
     private static void EnsureUiThread()
@@ -78,6 +80,8 @@ internal sealed class ReplayHost : IDisposable
                 try
                 {
                     // mirror Program.Main
+                    var onThreadException = typeof(Program).GetMethod("Application_ThreadException", BindingFlags.NonPublic | BindingFlags.Static)!;
+                    Application.ThreadException += (ThreadExceptionEventHandler)Delegate.CreateDelegate(typeof(ThreadExceptionEventHandler), onThreadException);
                     Newtonsoft.Json.JsonConvert.DefaultSettings = () => new Newtonsoft.Json.JsonSerializerSettings { ContractResolver = new CustomContractResolver() };
                     var control = new Control();
                     control.CreateControl();
@@ -87,6 +91,7 @@ internal sealed class ReplayHost : IDisposable
                     File.Copy(Path.Combine(RepoRoot, "docs", "codexRef.json"), Path.Combine(ReplayIsolation.DataFolder, "codexRef.json"), true);
                     File.Copy(Path.Combine(RepoRoot, "docs", "nebulae.json"), Path.Combine(ReplayIsolation.DataFolder, "nebulae.json"), true);
                     File.WriteAllText(Path.Combine(ReplayIsolation.DataFolder, "codexNotFound.json"), "{}"); // else fetched from a Google sheet
+                    System.IO.Compression.ZipFile.ExtractToDirectory(Path.Combine(RepoRoot, "data", "bio-criteria.zip"), BioCriteriaFolder, true); // else downloaded by Git.refreshPublishedData
 
                     Settings.Load();
                     AssertIsolated();
@@ -213,14 +218,16 @@ internal sealed class ReplayHost : IDisposable
     public int CountLog(string fragment) => Logs.Count(l => l.Contains(fragment));
 
     /// <summary>
-    /// Every exception the app caught and reported: journal event handlers, crashGuard, the Oops dialog (logged instead
-    /// of shown while Main.isClosing) and the swallowed ones in Status.json parsing.
+    /// Every exception the app caught and reported: journal event handlers, crashGuard, UI thread exceptions, the Oops dialog
+    /// (logged instead of shown while Main.isClosing) and the swallowed ones in Status.json parsing and fire-and-forget tasks.
     /// </summary>
     public List<string> AppErrors => Logs.Where(l =>
         l.Contains("Exception processing event")
         || l.Contains("FormErrorSubmit.show:")
         || l.Contains("crashGuard:")
-        || l.Contains("parseStatusFile: System.")).ToList();
+        || l.Contains("parseStatusFile: System.")
+        // Task.justDoIt() swallows faulted tasks into this log line - network trouble is environmental, anything else is a bug
+        || (l.Contains("isFirewallProblem?") && !l.Contains("HttpRequestException") && !l.Contains("TaskCanceledException") && !l.Contains("SocketException"))).ToList();
 
     /// <summary> Write the session's slice of the SrvSurvey log as a re-checkable artifact </summary>
     public string WriteArtifact(string summary)
