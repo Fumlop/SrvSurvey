@@ -1252,6 +1252,14 @@ namespace SrvSurvey.game
                     ColonyData.localUntrackedProject = null;
                     this.exitMats();
                 }
+                else if (this.systemData == null && this.cmdr != null)
+                {
+                    // MainMenu music can play briefly without the game actually reloading (no LoadGame/Location follows), so re-find where we are
+                    Game.log($"Left MainMenu without a new Location - re-initializing systemData");
+                    this.initSystemData(cmdr.fid, cmdr.commander);
+                    if (this.systemData != null && cmdr.currentBodyId >= 0)
+                        this.setCurrentBody(cmdr.currentBodyId);
+                }
             }
 
             var newCarrierMgmt = entry.MusicTrack == "FleetCarrier_Managment";
@@ -2356,6 +2364,8 @@ namespace SrvSurvey.game
             {
                 cmdr.currentBody = entry.Body;
                 cmdr.currentBodyId = entry.BodyID;
+                // the body may never have been scanned in these journals (eg: landed whilst playing on another PC)
+                this.systemData.findOrCreate(entry.Body, entry.BodyID);
                 this.setCurrentBody(entry.BodyID);
 
                 // steal radius from status?

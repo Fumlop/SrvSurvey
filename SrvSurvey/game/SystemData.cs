@@ -565,7 +565,7 @@ namespace SrvSurvey.game
 
         #region journal processing
 
-        private SystemBody findOrCreate(string bodyName, int bodyId)
+        internal SystemBody findOrCreate(string bodyName, int bodyId)
         {
             lock (this.bodies)
             {
@@ -1105,7 +1105,8 @@ namespace SrvSurvey.game
         {
             if (entry.SystemAddress != this.address) { Game.log($"Unmatched system! ScanOrganic Expected: `{this.address}`, got: {entry.SystemAddress}"); return false; }
             var body = this.bodies.FirstOrDefault(_ => _.id == entry.Body);
-            if (body!.organisms == null) body.organisms = new List<SystemOrganism>();
+            if (body == null) { Game.log($"Unknown body! ScanOrganic BodyID: {entry.Body} not in '{this.name}'"); return false; }
+            if (body.organisms == null) body.organisms = new List<SystemOrganism>();
 
             // find by first variant or entryId, then genusName
             var match = entry.Variant != null
